@@ -1,0 +1,13 @@
+- @metrics.each do |namespace, metrics|
+  %h1= namespace
+  %table
+    %thead
+      %tr
+        %th Metric
+        %th Data
+    %tbody
+      - metrics.each do |metric|
+        %tr
+          %td
+            %a{:href => "/metrics/#{metric[:id]}" }= metric[:name]
+          %td= metric[:data]

@@ -1,0 +1,24 @@
+%script{:type => 'text/javascript', :src => 'http://www.google.com/jsapi'}
+%script{:type => 'text/javascript'}
+  google.load('visualization', '1', {'packages':['annotatedtimeline', 'table']});
+  google.setOnLoadCallback(drawChart);
+  function drawChart() {
+  var data = new google.visualization.DataTable();
+  data.addColumn('datetime', 'Date');
+  = "data.addColumn('number', 'Average #{@data[0][:unit]}');"
+  = "data.addColumn('number', 'Sum #{@data[0][:unit]}');"
+  = "data.addColumn('number', 'Max #{@data[0][:unit]}');"
+  = "data.addColumn('number', 'Min #{@data[0][:unit]}');"
+  - @data.each do |metric|
+    = "data.addRow([new Date(Date.parse('#{metric[:date].strftime("%B %d, %Y %H:%M:%S")}')), #{metric[:average]}, #{metric[:sum]}, #{metric[:maximum]}, #{metric[:minimum]}]);"
+  var chart = new google.visualization.AnnotatedTimeLine(document.getElementById('chart_div'));
+  chart.draw(data, {displayAnnotations: true, fill: 15, dateFormat: 'HH:mm MMMM dd, yyyy'});
+  var table = new google.visualization.Table(document.getElementById('table_div'));
+  table.draw(data);
+  }
+
+%h1= @metric[:name]
+%h2= @metric[:data]
+%a{:href => '/'} Back to list of metrics
+#chart_div{:style => 'width: 98%; height: 240px'}
+#table_div
