@@ -1,10 +1,17 @@
 require 'rubygems'
 require 'sinatra'
 require 'haml'
+require 'right_aws'
+require 'lib/right_acw_interface'
+require 'Base64'
 
 set :views, File.join(File.dirname(__FILE__),'views')
 
+AWS_KEY = ''
+AWS_SECRET = ''
+
 class Metric
+  
   def self.all
     @metrics ||= Metric.get_metrics 
   end
@@ -41,35 +48,79 @@ class Metric
   private
   
   def self.get_metrics
-    data = `mon-list-metrics`
-    results = []
-    id = 1
-    
-    data.each_line("\n") do |line|
-      matches = line.match(/^([^\s]*)\s+([^\s]*)\s+([^\s]*)\s*$/)
-      results.push({
-        :name => matches[1],
-        :namespace => matches[2],
-        :data => matches[3],
-        :id => id
-      })
-      id += 1
-    end
-    
-    return results
-    
+  
   end
 end
 
+@@acw = RightAws::AcwInterface.new(AWS_KEY, AWS_SECRET)
 
 get '/' do
-  @metrics = Metric.all.group_by{|m| m[:namespace]}
+  @metrics = @@acw.list_metrics.group_by{|m| m[:namespace]}
   haml :index
 end
 
-get '/metrics/:id' do
-  d = Metric.get(params[:id])
-  @metric = d[:metric]
-  @data = d[:data]
+get '/metrics/:namespace/:metric' do
+  opts = {
+    :statistics => ['Sum', 'Average', 'Maximum', 'Minimum'],
+    :measure_name => params[:metric],
+    :namespace => params[:namespace].gsub('_', '/'),
+    :end_time => Time.now.utc,
+    :start_time => Time.now.utc - (24*60*60)
+  }
+  @metric = params[:metric]
+  @data = get_metrics(opts)
   haml :show
+end
+
+get '/metrics/:namespace/:metric/:range' do
+  range = params[:range].to_i
+  period = (range * 24 * 60 * 60)/1440
+  opts = {
+    :period => period,
+    :statistics => ['Sum', 'Average', 'Maximum', 'Minimum'],
+    :measure_name => params[:metric],
+    :namespace => params[:namespace].gsub('_', '/'),
+    :end_time => Time.now.utc,
+    :start_time => Time.now.utc - (24*60*60*range),
+  }
+  @metric = params[:metric]
+  @data = get_metrics(opts)
+  haml :show
+end
+
+
+get '/metrics/:namespace/:metric/:dimention_name/:dimention_value' do
+  opts = {
+    :statistics => ['Sum', 'Average', 'Maximum', 'Minimum'],
+    :measure_name => params[:metric],
+    :namespace => params[:namespace].gsub('_', '/'),
+    :end_time => Time.now.utc,
+    :start_time => Time.now.utc - (24*60*60),
+    :dimentions => {"#{params[:dimention_name]}" => "#{params[:dimention_value]}"}
+  }
+  @metric = params[:metric]
+  @data = get_metrics(opts)
+  haml :show
+end
+
+get '/metrics/:namespace/:metric/:dimention_name/:dimention_value/:range' do
+  range = params[:range].to_i
+  period = (range * 24 * 60 * 60)/1440
+  opts = {
+    :period => period,
+    :statistics => ['Sum', 'Average', 'Maximum', 'Minimum'],
+    :measure_name => params[:metric],
+    :namespace => params[:namespace].gsub('_', '/'),
+    :end_time => Time.now.utc,
+    :start_time => Time.now.utc - (24*60*60*range),
+    :dimentions => {"#{params[:dimention_name]}" => "#{params[:dimention_value]}"}
+  }
+  @metric = params[:metric]
+  @data = get_metrics(opts)
+  haml :show
+end
+
+def get_metrics(opts)
+  d = @@acw.get_metric_statistics(opts)
+  return d[:datapoints]
 end

@@ -3,11 +3,22 @@
   %table
     %thead
       %tr
-        %th Metric
-        %th Data
+        %th Measure
+        %th Dimensions
+        %th
+        %th
     %tbody
       - metrics.each do |metric|
         %tr
           %td
-            %a{:href => "/metrics/#{metric[:id]}" }= metric[:name]
-          %td= metric[:data]
+            - if !metric[:dimentions].empty?
+              - link = "/metrics/#{metric[:namespace].gsub('/','_')}/#{metric[:measure_name]}/#{metric[:dimentions].keys[0]}/#{metric[:dimentions].values[0]}"
+              %a{:href => link}= metric[:measure_name]
+            - else
+              - link = "/metrics/#{metric[:namespace].gsub('/','_')}/#{metric[:measure_name]}"
+              %a{:href =>  link}= metric[:measure_name]
+          %td= metric[:dimentions]
+          %td
+            %a{:href => link + '/5'} 5 Days
+          %td
+            %a{:href => link + '/30'} 1 Month
